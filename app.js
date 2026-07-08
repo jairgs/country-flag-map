@@ -407,6 +407,10 @@ function drawMap(world) {
     });
 
   map.call(zoom).on("dblclick.zoom", null);
+  map.on("mousemove.tooltip", (event) => {
+    const target = document.elementFromPoint(event.clientX, event.clientY);
+    if (!target?.closest?.(".country")) hideTooltip();
+  });
 
   const render = () => {
     const node = map.node();
