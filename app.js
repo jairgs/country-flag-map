@@ -409,7 +409,7 @@ function drawMap(world) {
   let currentZoom = d3.zoomIdentity;
 
   const updateMarkerSize = () => {
-    mapLayer.selectAll("circle.country-marker").attr("r", 4.5 / currentZoom.k);
+    mapLayer.selectAll("circle.country-marker").attr("r", 2.4 / currentZoom.k);
   };
 
   const countryAtPointer = (event) => {

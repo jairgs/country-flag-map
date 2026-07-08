@@ -208,9 +208,9 @@ h2 {
 }
 
 .country-marker {
-  fill: #ffffff;
-  stroke: #17212b;
-  stroke-width: 1.4;
+  fill: var(--land);
+  stroke: #a5b1b9;
+  stroke-width: 0.9;
   vector-effect: non-scaling-stroke;
 }
 
