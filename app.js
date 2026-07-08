@@ -12,6 +12,7 @@ const undoButton = document.querySelector("#undoButton");
 
 const selected = [];
 const countriesById = new Map();
+let draggedCountryId = null;
 const dragState = {
   active: false,
   started: false,
@@ -335,12 +336,39 @@ function updateUi() {
   flagList.replaceChildren(
     ...selected.map((country) => {
       const item = document.createElement("li");
+      item.draggable = true;
+      item.dataset.id = country.id;
       const button = document.createElement("button");
       button.type = "button";
       button.dataset.id = country.id;
       button.title = `Remove ${country.name}`;
-      button.innerHTML = `<span class="flag" aria-hidden="true">${country.flag}</span><span class="name">${country.name}</span>`;
+      button.innerHTML = `<span class="drag-handle" aria-hidden="true">⋮⋮</span><span class="flag" aria-hidden="true">${country.flag}</span><span class="name">${country.name}</span>`;
       button.addEventListener("click", () => toggleCountry(country.id));
+      item.addEventListener("dragstart", (event) => {
+        draggedCountryId = country.id;
+        item.classList.add("dragging");
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", country.id);
+      });
+      item.addEventListener("dragend", () => {
+        draggedCountryId = null;
+        item.classList.remove("dragging");
+        flagList.querySelectorAll(".drag-over").forEach((node) => node.classList.remove("drag-over"));
+      });
+      item.addEventListener("dragover", (event) => {
+        if (!draggedCountryId || draggedCountryId === country.id) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        item.classList.add("drag-over");
+      });
+      item.addEventListener("dragleave", () => {
+        item.classList.remove("drag-over");
+      });
+      item.addEventListener("drop", (event) => {
+        event.preventDefault();
+        item.classList.remove("drag-over");
+        reorderSelected(draggedCountryId, country.id);
+      });
       item.append(button);
       return item;
     }),
@@ -348,6 +376,18 @@ function updateUi() {
 
   renderEmojiImages(emojiOutput);
   renderEmojiImages(flagList);
+}
+
+function reorderSelected(sourceId, targetId) {
+  if (!sourceId || !targetId || sourceId === targetId) return;
+
+  const sourceIndex = selected.findIndex((country) => country.id === sourceId);
+  const targetIndex = selected.findIndex((country) => country.id === targetId);
+  if (sourceIndex < 0 || targetIndex < 0) return;
+
+  const [country] = selected.splice(sourceIndex, 1);
+  selected.splice(targetIndex, 0, country);
+  updateUi();
 }
 
 function setCountrySelected(id, shouldSelect) {

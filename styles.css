@@ -319,9 +319,17 @@ h2 {
   border-bottom: 1px solid #e1e7eb;
 }
 
+.flag-list li.dragging {
+  opacity: 0.5;
+}
+
+.flag-list li.drag-over {
+  border-top: 2px solid var(--selected);
+}
+
 .flag-list button {
   display: grid;
-  grid-template-columns: 32px minmax(0, 1fr);
+  grid-template-columns: 18px 32px minmax(0, 1fr);
   gap: 8px;
   align-items: center;
   width: 100%;
@@ -330,6 +338,17 @@ h2 {
   border: 0;
   background: transparent;
   text-align: left;
+}
+
+.drag-handle {
+  color: #8fa0ac;
+  cursor: grab;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.flag-list li:active .drag-handle {
+  cursor: grabbing;
 }
 
 .flag-list .flag {
