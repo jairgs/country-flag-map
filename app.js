@@ -377,19 +377,16 @@ function setCountryAtPointer(event, shouldSelect) {
 }
 
 function positionTooltip(event, country) {
+  const panelRect = mapPanel.getBoundingClientRect();
   tooltip.hidden = false;
   tooltip.textContent = `${country.flag} ${country.name}`;
   renderEmojiImages(tooltip);
-  tooltip.style.left = `${event.offsetX}px`;
-  tooltip.style.top = `${event.offsetY}px`;
+  tooltip.style.left = `${event.clientX - panelRect.left}px`;
+  tooltip.style.top = `${event.clientY - panelRect.top}px`;
 }
 
 function hideTooltip() {
   tooltip.hidden = true;
-}
-
-function pointerIsOnCountry(event) {
-  return event.composedPath().some((target) => target.classList?.contains("country"));
 }
 
 function drawMap(world) {
@@ -402,6 +399,16 @@ function drawMap(world) {
   const path = d3.geoPath(projection);
   let currentZoom = d3.zoomIdentity;
 
+  const countryAtPointer = (event) => {
+    const panelRect = mapPanel.getBoundingClientRect();
+    const screenPoint = [event.clientX - panelRect.left, event.clientY - panelRect.top];
+    const projectedPoint = currentZoom.invert(screenPoint);
+    const coordinates = projection.invert(projectedPoint);
+
+    if (!coordinates) return null;
+    return countries.find((feature) => d3.geoContains(feature, coordinates)) || null;
+  };
+
   const zoom = d3
     .zoom()
     .filter((event) => event.type === "wheel")
@@ -412,14 +419,20 @@ function drawMap(world) {
     });
 
   map.call(zoom).on("dblclick.zoom", null);
-  window.addEventListener(
-    "pointermove",
-    (event) => {
-      if (!mapPanel.contains(event.target)) return;
-      if (!pointerIsOnCountry(event)) hideTooltip();
-    },
-    { capture: true },
-  );
+  mapPanel.addEventListener("pointermove", (event) => {
+    if (dragState.active) {
+      hideTooltip();
+      return;
+    }
+
+    const feature = countryAtPointer(event);
+    if (!feature) {
+      hideTooltip();
+      return;
+    }
+
+    positionTooltip(event, countriesById.get(idKey(feature.id)));
+  });
   mapPanel.addEventListener("pointerleave", hideTooltip);
 
   const render = () => {
@@ -514,10 +527,6 @@ function drawMap(world) {
         toggleCountry(idKey(feature.id));
       }
     })
-    .on("mousemove", (event, feature) => {
-      positionTooltip(event, countriesById.get(idKey(feature.id)));
-    })
-    .on("mouseleave", hideTooltip)
     .append("title")
     .text((feature) => countriesById.get(idKey(feature.id)).name);
 
