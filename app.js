@@ -347,7 +347,7 @@ function restoreSelection() {
   });
 }
 
-function addReorderHandlers(element, country) {
+function addDragStartHandlers(element, country) {
   element.draggable = true;
   element.dataset.id = country.id;
   element.addEventListener("dragstart", (event) => {
@@ -362,7 +362,14 @@ function addReorderHandlers(element, country) {
     document
       .querySelectorAll(".drag-over")
       .forEach((node) => node.classList.remove("drag-over"));
+    document
+      .querySelectorAll(".drop-slot.active")
+      .forEach((node) => node.classList.remove("active"));
   });
+}
+
+function addReorderHandlers(element, country) {
+  addDragStartHandlers(element, country);
   element.addEventListener("dragover", (event) => {
     if (!draggedCountryId || draggedCountryId === country.id) return;
     event.preventDefault();
@@ -384,9 +391,34 @@ function addReorderHandlers(element, country) {
 
 function shouldDropAfter(event, element) {
   const rect = element.getBoundingClientRect();
-  const isVerticalItem = element.tagName === "LI";
-  if (isVerticalItem) return event.clientY > rect.top + rect.height / 2;
-  return event.clientX > rect.left + rect.width / 2;
+  return event.clientY > rect.top + rect.height / 2;
+}
+
+function createDropSlot(index) {
+  const slot = document.createElement("span");
+  slot.className = "drop-slot";
+
+  slot.addEventListener("dragover", (event) => {
+    if (!draggedCountryId) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    emojiOutput
+      .querySelectorAll(".drop-slot.active")
+      .forEach((node) => node.classList.remove("active"));
+    slot.classList.add("active");
+  });
+
+  slot.addEventListener("dragleave", () => {
+    slot.classList.remove("active");
+  });
+
+  slot.addEventListener("drop", (event) => {
+    event.preventDefault();
+    slot.classList.remove("active");
+    reorderSelectedToIndex(draggedCountryId, index);
+  });
+
+  return slot;
 }
 
 function renderEmojiImages(node) {
@@ -403,16 +435,18 @@ function updateUi() {
   count.textContent = selected.length;
   const emojis = selectedEmojis();
   emojiOutput.value = emojis;
-  emojiOutput.replaceChildren(
-    ...selected.map((country) => {
-      const chip = document.createElement("span");
-      chip.className = "emoji-chip";
-      chip.title = country.name;
-      chip.textContent = country.flag;
-      addReorderHandlers(chip, country);
-      return chip;
-    }),
-  );
+  const emojiNodes = [];
+  selected.forEach((country, index) => {
+    emojiNodes.push(createDropSlot(index));
+    const chip = document.createElement("span");
+    chip.className = "emoji-chip";
+    chip.title = country.name;
+    chip.textContent = country.flag;
+    addDragStartHandlers(chip, country);
+    emojiNodes.push(chip);
+  });
+  emojiNodes.push(createDropSlot(selected.length));
+  emojiOutput.replaceChildren(...emojiNodes);
   statusText.textContent = "Click or drag to select. Shift-click or Shift-drag to deselect.";
 
   copyButton.disabled = selected.length === 0;
@@ -449,6 +483,18 @@ function reorderSelected(sourceId, targetId, afterTarget = false) {
   const [country] = selected.splice(sourceIndex, 1);
   const adjustedTargetIndex = selected.findIndex((selectedCountry) => selectedCountry.id === targetId);
   selected.splice(adjustedTargetIndex + (afterTarget ? 1 : 0), 0, country);
+  updateUi();
+}
+
+function reorderSelectedToIndex(sourceId, targetIndex) {
+  if (!sourceId) return;
+
+  const sourceIndex = selected.findIndex((country) => country.id === sourceId);
+  if (sourceIndex < 0) return;
+
+  const [country] = selected.splice(sourceIndex, 1);
+  const adjustedTargetIndex = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex;
+  selected.splice(Math.max(0, Math.min(adjustedTargetIndex, selected.length)), 0, country);
   updateUi();
 }
 

@@ -285,7 +285,7 @@ h2 {
   display: flex;
   flex-wrap: wrap;
   align-content: flex-start;
-  gap: 6px;
+  gap: 0;
   min-height: 74px;
   margin: 14px 0;
   padding: 12px;
@@ -302,9 +302,15 @@ h2 {
   place-items: center;
   min-width: 34px;
   height: 34px;
+  margin: 0 1px;
   border: 1px solid transparent;
   border-radius: 6px;
   cursor: grab;
+  transition:
+    margin 140ms ease,
+    transform 140ms ease,
+    background 140ms ease,
+    border-color 140ms ease;
 }
 
 .emoji-chip:hover {
@@ -317,9 +323,30 @@ h2 {
   opacity: 0.5;
 }
 
-.emoji-chip.drag-over {
-  border-color: var(--selected);
-  background: color-mix(in srgb, var(--selected), transparent 88%);
+.drop-slot {
+  position: relative;
+  align-self: stretch;
+  width: 8px;
+  min-height: 34px;
+  margin: 0 -4px;
+  transition:
+    width 140ms ease,
+    margin 140ms ease;
+}
+
+.drop-slot.active {
+  width: 22px;
+  margin: 0 2px;
+}
+
+.drop-slot.active::before {
+  content: "";
+  position: absolute;
+  inset: 4px auto 4px 50%;
+  width: 2px;
+  border-radius: 999px;
+  background: var(--selected);
+  transform: translateX(-50%);
 }
 
 .emoji-output img,
