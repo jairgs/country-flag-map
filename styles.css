@@ -326,17 +326,17 @@ h2 {
 .drop-slot {
   position: relative;
   align-self: stretch;
-  width: 8px;
+  width: 30px;
   min-height: 34px;
-  margin: 0 -4px;
+  margin: 0 -15px;
   transition:
     width 140ms ease,
     margin 140ms ease;
 }
 
 .drop-slot.active {
-  width: 22px;
-  margin: 0 2px;
+  width: 42px;
+  margin: 0 -6px;
 }
 
 .drop-slot.active::before {
