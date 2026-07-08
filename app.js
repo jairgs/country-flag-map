@@ -1,4 +1,5 @@
 const map = d3.select("#map");
+const mapLayer = map.append("g").attr("class", "map-layer");
 const tooltip = document.querySelector("#tooltip");
 const statusText = document.querySelector("#status");
 const count = document.querySelector("#count");
@@ -394,6 +395,18 @@ function drawMap(world) {
   };
   const projection = d3.geoNaturalEarth1();
   const path = d3.geoPath(projection);
+  let currentZoom = d3.zoomIdentity;
+
+  const zoom = d3
+    .zoom()
+    .filter((event) => event.type === "wheel")
+    .scaleExtent([1, 12])
+    .on("zoom", (event) => {
+      currentZoom = event.transform;
+      mapLayer.attr("transform", currentZoom);
+    });
+
+  map.call(zoom).on("dblclick.zoom", null);
 
   const render = () => {
     const node = map.node();
@@ -413,7 +426,12 @@ function drawMap(world) {
     );
     const [x, y] = projection.translate();
     projection.translate([x - width * 0.045, y - height * 0.035]);
-    map.selectAll("path").attr("d", path);
+    zoom.translateExtent([
+      [-width * 2, -height * 2],
+      [width * 3, height * 3],
+    ]);
+    mapLayer.selectAll("path").attr("d", path);
+    mapLayer.attr("transform", currentZoom);
   };
 
   countries.forEach((feature) => {
@@ -427,7 +445,7 @@ function drawMap(world) {
     });
   });
 
-  map
+  mapLayer
     .selectAll("path")
     .data(countries)
     .join("path")
@@ -545,7 +563,7 @@ undoButton.addEventListener("click", () => {
   if (last) toggleCountry(last.id);
 });
 
-d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json")
+d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json")
   .then((world) => drawMap(world))
   .catch(() => {
     statusText.textContent = "The map data could not load. Check the network connection and refresh.";
