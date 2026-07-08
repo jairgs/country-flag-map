@@ -388,6 +388,10 @@ function hideTooltip() {
   tooltip.hidden = true;
 }
 
+function pointerIsOnCountry(event) {
+  return event.composedPath().some((target) => target.classList?.contains("country"));
+}
+
 function drawMap(world) {
   const countries = topojson.feature(world, world.objects.countries).features;
   const fitCountries = {
@@ -408,10 +412,14 @@ function drawMap(world) {
     });
 
   map.call(zoom).on("dblclick.zoom", null);
-  mapPanel.addEventListener("pointermove", (event) => {
-    const target = document.elementFromPoint(event.clientX, event.clientY);
-    if (!target?.closest?.(".country")) hideTooltip();
-  });
+  window.addEventListener(
+    "pointermove",
+    (event) => {
+      if (!mapPanel.contains(event.target)) return;
+      if (!pointerIsOnCountry(event)) hideTooltip();
+    },
+    { capture: true },
+  );
   mapPanel.addEventListener("pointerleave", hideTooltip);
 
   const render = () => {
