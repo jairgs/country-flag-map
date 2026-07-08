@@ -8,7 +8,6 @@
   --land: #eef1ef;
   --land-hover: #dce5e8;
   --selected: #d95f4f;
-  --selected-2: #d99a2b;
   --water: #b9cbd6;
   --focus: #2f6f9f;
   --shadow: 0 16px 42px rgba(23, 33, 43, 0.14);
@@ -197,12 +196,6 @@ h2 {
 
 .country.selected {
   fill: var(--selected);
-  stroke: #ffffff;
-  stroke-width: 0.9;
-}
-
-.country.selected:nth-of-type(2n) {
-  fill: var(--selected-2);
   stroke: #ffffff;
   stroke-width: 0.9;
 }
