@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Flag Map</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="toolbar" aria-label="Map controls">
+        <div>
+          <h1>Flag Map</h1>
+          <p id="status">Click countries to build a copyable flag list.</p>
+        </div>
+      </header>
+
+      <section class="workspace">
+        <div class="map-panel" aria-label="Clickable world map">
+          <svg id="map" role="img" aria-labelledby="mapTitle"></svg>
+          <h2 id="mapTitle" class="sr-only">World map with clickable countries</h2>
+          <div id="tooltip" class="tooltip" hidden></div>
+        </div>
+
+        <aside class="flag-panel" aria-label="Selected country flags">
+          <div class="panel-head">
+            <div class="panel-title">
+              <h2>Flags</h2>
+              <span id="count">0</span>
+            </div>
+            <div class="actions">
+              <button id="undoButton" type="button" title="Undo last country" aria-label="Undo last country">
+                <i data-lucide="undo-2" aria-hidden="true"></i>
+              </button>
+              <button id="clearButton" type="button" title="Clear selection" aria-label="Clear selection">
+                <i data-lucide="trash-2" aria-hidden="true"></i>
+              </button>
+              <button id="copyButton" type="button">Copy</button>
+            </div>
+          </div>
+          <output id="emojiOutput" class="emoji-output" aria-live="polite"></output>
+          <ol id="flagList" class="flag-list"></ol>
+        </aside>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
