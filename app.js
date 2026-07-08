@@ -368,15 +368,25 @@ function addReorderHandlers(element, country) {
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
     element.classList.add("drag-over");
+    element.classList.toggle("drag-after", shouldDropAfter(event, element));
   });
   element.addEventListener("dragleave", () => {
     element.classList.remove("drag-over");
+    element.classList.remove("drag-after");
   });
   element.addEventListener("drop", (event) => {
     event.preventDefault();
     element.classList.remove("drag-over");
-    reorderSelected(draggedCountryId, country.id);
+    element.classList.remove("drag-after");
+    reorderSelected(draggedCountryId, country.id, shouldDropAfter(event, element));
   });
+}
+
+function shouldDropAfter(event, element) {
+  const rect = element.getBoundingClientRect();
+  const isVerticalItem = element.tagName === "LI";
+  if (isVerticalItem) return event.clientY > rect.top + rect.height / 2;
+  return event.clientX > rect.left + rect.width / 2;
 }
 
 function renderEmojiImages(node) {
@@ -429,7 +439,7 @@ function updateUi() {
   saveSelection();
 }
 
-function reorderSelected(sourceId, targetId) {
+function reorderSelected(sourceId, targetId, afterTarget = false) {
   if (!sourceId || !targetId || sourceId === targetId) return;
 
   const sourceIndex = selected.findIndex((country) => country.id === sourceId);
@@ -437,7 +447,8 @@ function reorderSelected(sourceId, targetId) {
   if (sourceIndex < 0 || targetIndex < 0) return;
 
   const [country] = selected.splice(sourceIndex, 1);
-  selected.splice(targetIndex, 0, country);
+  const adjustedTargetIndex = selected.findIndex((selectedCountry) => selectedCountry.id === targetId);
+  selected.splice(adjustedTargetIndex + (afterTarget ? 1 : 0), 0, country);
   updateUi();
 }
 

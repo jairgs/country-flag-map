@@ -351,6 +351,11 @@ h2 {
   border-top: 2px solid var(--selected);
 }
 
+.flag-list li.drag-over.drag-after {
+  border-top: 0;
+  border-bottom: 2px solid var(--selected);
+}
+
 .flag-list button {
   display: grid;
   grid-template-columns: 18px 32px minmax(0, 1fr);
