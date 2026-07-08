@@ -526,9 +526,7 @@ function drawMap(world) {
         event.preventDefault();
         toggleCountry(idKey(feature.id));
       }
-    })
-    .append("title")
-    .text((feature) => countriesById.get(idKey(feature.id)).name);
+    });
 
   window.addEventListener("pointerup", () => {
     dragState.active = false;
