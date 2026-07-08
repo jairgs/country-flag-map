@@ -1,5 +1,6 @@
 const map = d3.select("#map");
 const mapLayer = map.append("g").attr("class", "map-layer");
+const mapPanel = document.querySelector(".map-panel");
 const tooltip = document.querySelector("#tooltip");
 const statusText = document.querySelector("#status");
 const count = document.querySelector("#count");
@@ -407,10 +408,11 @@ function drawMap(world) {
     });
 
   map.call(zoom).on("dblclick.zoom", null);
-  map.on("mousemove.tooltip", (event) => {
+  mapPanel.addEventListener("pointermove", (event) => {
     const target = document.elementFromPoint(event.clientX, event.clientY);
     if (!target?.closest?.(".country")) hideTooltip();
   });
+  mapPanel.addEventListener("pointerleave", hideTooltip);
 
   const render = () => {
     const node = map.node();
