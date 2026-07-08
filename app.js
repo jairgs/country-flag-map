@@ -312,6 +312,38 @@ function selectedEmojis() {
   return selected.map((country) => country.flag).join(" ");
 }
 
+function addReorderHandlers(element, country) {
+  element.draggable = true;
+  element.dataset.id = country.id;
+  element.addEventListener("dragstart", (event) => {
+    draggedCountryId = country.id;
+    element.classList.add("dragging");
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", country.id);
+  });
+  element.addEventListener("dragend", () => {
+    draggedCountryId = null;
+    element.classList.remove("dragging");
+    document
+      .querySelectorAll(".drag-over")
+      .forEach((node) => node.classList.remove("drag-over"));
+  });
+  element.addEventListener("dragover", (event) => {
+    if (!draggedCountryId || draggedCountryId === country.id) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    element.classList.add("drag-over");
+  });
+  element.addEventListener("dragleave", () => {
+    element.classList.remove("drag-over");
+  });
+  element.addEventListener("drop", (event) => {
+    event.preventDefault();
+    element.classList.remove("drag-over");
+    reorderSelected(draggedCountryId, country.id);
+  });
+}
+
 function renderEmojiImages(node) {
   if (!window.twemoji) return;
   twemoji.parse(node, {
@@ -326,7 +358,16 @@ function updateUi() {
   count.textContent = selected.length;
   const emojis = selectedEmojis();
   emojiOutput.value = emojis;
-  emojiOutput.textContent = emojis;
+  emojiOutput.replaceChildren(
+    ...selected.map((country) => {
+      const chip = document.createElement("span");
+      chip.className = "emoji-chip";
+      chip.title = country.name;
+      chip.textContent = country.flag;
+      addReorderHandlers(chip, country);
+      return chip;
+    }),
+  );
   statusText.textContent = "Click or drag to select. Shift-click or Shift-drag to deselect.";
 
   copyButton.disabled = selected.length === 0;
@@ -336,39 +377,13 @@ function updateUi() {
   flagList.replaceChildren(
     ...selected.map((country) => {
       const item = document.createElement("li");
-      item.draggable = true;
-      item.dataset.id = country.id;
       const button = document.createElement("button");
       button.type = "button";
       button.dataset.id = country.id;
       button.title = `Remove ${country.name}`;
       button.innerHTML = `<span class="drag-handle" aria-hidden="true">⋮⋮</span><span class="flag" aria-hidden="true">${country.flag}</span><span class="name">${country.name}</span>`;
       button.addEventListener("click", () => toggleCountry(country.id));
-      item.addEventListener("dragstart", (event) => {
-        draggedCountryId = country.id;
-        item.classList.add("dragging");
-        event.dataTransfer.effectAllowed = "move";
-        event.dataTransfer.setData("text/plain", country.id);
-      });
-      item.addEventListener("dragend", () => {
-        draggedCountryId = null;
-        item.classList.remove("dragging");
-        flagList.querySelectorAll(".drag-over").forEach((node) => node.classList.remove("drag-over"));
-      });
-      item.addEventListener("dragover", (event) => {
-        if (!draggedCountryId || draggedCountryId === country.id) return;
-        event.preventDefault();
-        event.dataTransfer.dropEffect = "move";
-        item.classList.add("drag-over");
-      });
-      item.addEventListener("dragleave", () => {
-        item.classList.remove("drag-over");
-      });
-      item.addEventListener("drop", (event) => {
-        event.preventDefault();
-        item.classList.remove("drag-over");
-        reorderSelected(draggedCountryId, country.id);
-      });
+      addReorderHandlers(item, country);
       item.append(button);
       return item;
     }),

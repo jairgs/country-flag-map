@@ -282,7 +282,10 @@ h2 {
 }
 
 .emoji-output {
-  display: block;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 6px;
   min-height: 74px;
   margin: 14px 0;
   padding: 12px;
@@ -292,6 +295,31 @@ h2 {
   font-size: 1.7rem;
   line-height: 1.45;
   word-break: break-word;
+}
+
+.emoji-chip {
+  display: inline-grid;
+  place-items: center;
+  min-width: 34px;
+  height: 34px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: grab;
+}
+
+.emoji-chip:hover {
+  background: #e8eef2;
+  border-color: var(--line);
+}
+
+.emoji-chip.dragging,
+.flag-list li.dragging {
+  opacity: 0.5;
+}
+
+.emoji-chip.drag-over {
+  border-color: var(--selected);
+  background: color-mix(in srgb, var(--selected), transparent 88%);
 }
 
 .emoji-output img,
@@ -317,10 +345,6 @@ h2 {
 .flag-list li {
   padding: 9px 0;
   border-bottom: 1px solid #e1e7eb;
-}
-
-.flag-list li.dragging {
-  opacity: 0.5;
 }
 
 .flag-list li.drag-over {
