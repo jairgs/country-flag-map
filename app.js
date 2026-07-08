@@ -10,6 +10,7 @@ const copyButton = document.querySelector("#copyButton");
 const clearButton = document.querySelector("#clearButton");
 const undoButton = document.querySelector("#undoButton");
 
+const STORAGE_KEY = "flag-map:selected-country-ids";
 const selected = [];
 const countriesById = new Map();
 let draggedCountryId = null;
@@ -312,6 +313,40 @@ function selectedEmojis() {
   return selected.map((country) => country.flag).join(" ");
 }
 
+function saveSelection() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(selected.map((country) => country.id)));
+  } catch {
+    statusText.textContent = "Selection could not be saved in this browser.";
+  }
+}
+
+function restoreSelection() {
+  let savedIds = [];
+
+  try {
+    savedIds = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+  } catch {
+    savedIds = [];
+  }
+
+  selected.splice(0, selected.length);
+  savedIds.forEach((id) => {
+    const country = countriesById.get(id);
+    if (country && !selected.some((selectedCountry) => selectedCountry.id === id)) {
+      selected.push(country);
+    }
+  });
+
+  map.selectAll(".selected").classed("selected", false).attr("aria-pressed", "false");
+  selected.forEach((country) => {
+    map
+      .selectAll(`[data-id="${CSS.escape(country.id)}"]`)
+      .classed("selected", true)
+      .attr("aria-pressed", "true");
+  });
+}
+
 function addReorderHandlers(element, country) {
   element.draggable = true;
   element.dataset.id = country.id;
@@ -391,6 +426,7 @@ function updateUi() {
 
   renderEmojiImages(emojiOutput);
   renderEmojiImages(flagList);
+  saveSelection();
 }
 
 function reorderSelected(sourceId, targetId) {
@@ -668,6 +704,7 @@ function drawMap(world) {
 
   render();
   new ResizeObserver(render).observe(map.node());
+  restoreSelection();
   updateUi();
 }
 
