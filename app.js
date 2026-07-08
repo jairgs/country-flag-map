@@ -20,6 +20,12 @@ const dragState = {
   startId: null,
   mode: "select",
 };
+const panState = {
+  active: false,
+  startX: 0,
+  startY: 0,
+  transform: d3.zoomIdentity,
+};
 
 if (window.lucide) {
   lucide.createIcons();
@@ -281,6 +287,7 @@ const nameOverrides = {
   "010": "Antarctica",
   "158": "Taiwan",
   "275": "Palestine",
+  "336": "Vatican City",
   "410": "South Korea",
   "408": "North Korea",
   "643": "Russia",
@@ -345,17 +352,17 @@ function updateUi() {
 
 function setCountrySelected(id, shouldSelect) {
   const index = selected.findIndex((country) => country.id === id);
-  const path = map.select(`[data-id="${CSS.escape(id)}"]`);
+  const countryElements = map.selectAll(`[data-id="${CSS.escape(id)}"]`);
 
   if (shouldSelect && index < 0) {
     selected.push(countriesById.get(id));
-    path.classed("selected", true).attr("aria-pressed", "true");
+    countryElements.classed("selected", true).attr("aria-pressed", "true");
     updateUi();
   }
 
   if (!shouldSelect && index >= 0) {
     selected.splice(index, 1);
-    path.classed("selected", false).attr("aria-pressed", "false");
+    countryElements.classed("selected", false).attr("aria-pressed", "false");
     updateUi();
   }
 }
@@ -391,6 +398,8 @@ function hideTooltip() {
 
 function drawMap(world) {
   const countries = topojson.feature(world, world.objects.countries).features;
+  const markerCountryIds = new Set(["336"]);
+  const markerCountries = countries.filter((feature) => markerCountryIds.has(idKey(feature.id)));
   const fitCountries = {
     type: "FeatureCollection",
     features: countries.filter((feature) => idKey(feature.id) !== "010"),
@@ -399,7 +408,15 @@ function drawMap(world) {
   const path = d3.geoPath(projection);
   let currentZoom = d3.zoomIdentity;
 
+  const updateMarkerSize = () => {
+    mapLayer.selectAll("circle.country-marker").attr("r", 4.5 / currentZoom.k);
+  };
+
   const countryAtPointer = (event) => {
+    const target = document.elementFromPoint(event.clientX, event.clientY);
+    const countryElement = target?.closest?.(".country");
+    if (countryElement) return countriesById.get(countryElement.dataset.id)?.feature || null;
+
     const panelRect = mapPanel.getBoundingClientRect();
     const screenPoint = [event.clientX - panelRect.left, event.clientY - panelRect.top];
     const projectedPoint = currentZoom.invert(screenPoint);
@@ -416,11 +433,12 @@ function drawMap(world) {
     .on("zoom", (event) => {
       currentZoom = event.transform;
       mapLayer.attr("transform", currentZoom);
+      updateMarkerSize();
     });
 
   map.call(zoom).on("dblclick.zoom", null);
   mapPanel.addEventListener("pointermove", (event) => {
-    if (dragState.active) {
+    if (dragState.active || panState.active) {
       hideTooltip();
       return;
     }
@@ -434,6 +452,19 @@ function drawMap(world) {
     positionTooltip(event, countriesById.get(idKey(feature.id)));
   });
   mapPanel.addEventListener("pointerleave", hideTooltip);
+  mapPanel.addEventListener("pointerdown", (event) => {
+    if (event.button !== 1) return;
+    event.preventDefault();
+    hideTooltip();
+    mapPanel.setPointerCapture?.(event.pointerId);
+    panState.active = true;
+    panState.startX = event.clientX;
+    panState.startY = event.clientY;
+    panState.transform = currentZoom;
+  });
+  mapPanel.addEventListener("auxclick", (event) => {
+    if (event.button === 1) event.preventDefault();
+  });
 
   const render = () => {
     const node = map.node();
@@ -458,6 +489,11 @@ function drawMap(world) {
       [width * 3, height * 3],
     ]);
     mapLayer.selectAll("path").attr("d", path);
+    mapLayer
+      .selectAll("circle.country-marker")
+      .attr("cx", (feature) => path.centroid(feature)[0])
+      .attr("cy", (feature) => path.centroid(feature)[1]);
+    updateMarkerSize();
     mapLayer.attr("transform", currentZoom);
   };
 
@@ -467,70 +503,83 @@ function drawMap(world) {
     countriesById.set(id, {
       id,
       alpha2,
+      feature,
       flag: alpha2ToFlag(alpha2),
       name: nameOverrides[id] || feature.properties?.name || `Country ${id}`,
     });
   });
 
-  mapLayer
-    .selectAll("path")
-    .data(countries)
-    .join("path")
-    .attr("class", "country")
-    .attr("data-id", (feature) => idKey(feature.id))
-    .attr("tabindex", "0")
-    .attr("role", "button")
-    .attr("aria-pressed", "false")
-    .attr("aria-label", (feature) => countriesById.get(idKey(feature.id)).name)
-    .on("pointerdown", (event, feature) => {
-      event.preventDefault();
-      event.currentTarget.setPointerCapture?.(event.pointerId);
-      dragState.active = true;
-      dragState.started = false;
-      dragState.startX = event.clientX;
-      dragState.startY = event.clientY;
-      dragState.startId = idKey(feature.id);
-      dragState.mode = event.shiftKey ? "deselect" : "select";
-    })
-    .on("pointerenter", (event) => {
-      if (!dragState.active) return;
-      event.preventDefault();
-      dragState.started = true;
-      const shouldSelect = dragState.mode === "select";
-      if (dragState.startId) setCountrySelected(dragState.startId, shouldSelect);
-      setCountryAtPointer(event, shouldSelect);
-    })
-    .on("pointermove", (event) => {
-      if (!dragState.active) return;
-      event.preventDefault();
-      const distance = Math.hypot(event.clientX - dragState.startX, event.clientY - dragState.startY);
-      if (distance < 4) return;
-      dragState.started = true;
-      const shouldSelect = dragState.mode === "select";
-      if (dragState.startId) setCountrySelected(dragState.startId, shouldSelect);
-      setCountryAtPointer(event, shouldSelect);
-    })
-    .on("click", (event, feature) => {
-      if (dragState.started) {
+  const addCountryInteractions = (selection) => {
+    selection
+      .attr("data-id", (feature) => idKey(feature.id))
+      .attr("tabindex", "0")
+      .attr("role", "button")
+      .attr("aria-pressed", "false")
+      .attr("aria-label", (feature) => countriesById.get(idKey(feature.id)).name)
+      .on("pointerdown", (event, feature) => {
+        if (event.button !== 0) return;
         event.preventDefault();
-        return;
-      }
-      if (event.shiftKey) {
-        setCountrySelected(idKey(feature.id), false);
-      } else {
-        toggleCountry(idKey(feature.id));
-      }
-    })
-    .on("keydown", (event, feature) => {
-      if (event.key === "Enter" || event.key === " ") {
+        event.currentTarget.setPointerCapture?.(event.pointerId);
+        dragState.active = true;
+        dragState.started = false;
+        dragState.startX = event.clientX;
+        dragState.startY = event.clientY;
+        dragState.startId = idKey(feature.id);
+        dragState.mode = event.shiftKey ? "deselect" : "select";
+      })
+      .on("pointerenter", (event) => {
+        if (!dragState.active) return;
         event.preventDefault();
-        toggleCountry(idKey(feature.id));
-      }
-    });
+        dragState.started = true;
+        const shouldSelect = dragState.mode === "select";
+        if (dragState.startId) setCountrySelected(dragState.startId, shouldSelect);
+        setCountryAtPointer(event, shouldSelect);
+      })
+      .on("pointermove", (event) => {
+        if (!dragState.active) return;
+        event.preventDefault();
+        const distance = Math.hypot(event.clientX - dragState.startX, event.clientY - dragState.startY);
+        if (distance < 4) return;
+        dragState.started = true;
+        const shouldSelect = dragState.mode === "select";
+        if (dragState.startId) setCountrySelected(dragState.startId, shouldSelect);
+        setCountryAtPointer(event, shouldSelect);
+      })
+      .on("click", (event, feature) => {
+        if (dragState.started) {
+          event.preventDefault();
+          return;
+        }
+        if (event.shiftKey) {
+          setCountrySelected(idKey(feature.id), false);
+        } else {
+          toggleCountry(idKey(feature.id));
+        }
+      })
+      .on("keydown", (event, feature) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          toggleCountry(idKey(feature.id));
+        }
+      });
+  };
+
+  addCountryInteractions(
+    mapLayer.selectAll("path").data(countries).join("path").attr("class", "country"),
+  );
+
+  addCountryInteractions(
+    mapLayer
+      .selectAll("circle.country-marker")
+      .data(markerCountries)
+      .join("circle")
+      .attr("class", "country country-marker"),
+  );
 
   window.addEventListener("pointerup", () => {
     dragState.active = false;
     dragState.startId = null;
+    panState.active = false;
     requestAnimationFrame(() => {
       dragState.started = false;
     });
@@ -539,6 +588,17 @@ function drawMap(world) {
   window.addEventListener(
     "pointermove",
     (event) => {
+      if (panState.active) {
+        event.preventDefault();
+        const dx = event.clientX - panState.startX;
+        const dy = event.clientY - panState.startY;
+        const nextZoom = d3.zoomIdentity
+          .translate(panState.transform.x + dx, panState.transform.y + dy)
+          .scale(panState.transform.k);
+        map.call(zoom.transform, nextZoom);
+        return;
+      }
+
       if (!dragState.active) return;
       event.preventDefault();
       const distance = Math.hypot(event.clientX - dragState.startX, event.clientY - dragState.startY);

@@ -207,6 +207,21 @@ h2 {
   stroke-width: 0.9;
 }
 
+.country-marker {
+  fill: #ffffff;
+  stroke: #17212b;
+  stroke-width: 1.4;
+  vector-effect: non-scaling-stroke;
+}
+
+.country-marker:hover {
+  fill: var(--land-hover);
+}
+
+.country-marker.selected {
+  fill: var(--selected);
+}
+
 .tooltip {
   position: absolute;
   z-index: 2;
